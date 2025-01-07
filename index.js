@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const morgan = require('morgan');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const port = process.env.PORT || 8000
@@ -8,6 +9,7 @@ const port = process.env.PORT || 8000
 // middleware
 app.use(cors());
 app.use(express.json());
+app.use(morgan('dev'))
 
 
 // MongoDB Starts here
@@ -29,6 +31,19 @@ async function run() {
 
 		const menuCollection = client.db('BistroDB').collection('menu');
 		const cartsCollection = client.db('BistroDB').collection('carts');
+		const usersCollection = client.db('BistroDB').collection('users');
+
+
+		// users related api
+		app.post('/users', async (req,res) => {
+			const user = req.body;
+			const result = await usersCollection.insertOne(user);
+			res.send(result);
+		})
+
+
+
+
 
 		app.get('/menu', async (req, res) => {
 			const result = await menuCollection.find().toArray();

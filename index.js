@@ -35,6 +35,13 @@ async function run() {
 
 
 		// users related api
+
+		app.get('/users', async (req, res) => {
+			const result = await usersCollection.find().toArray();
+			res.send(result);
+		});
+
+
 		app.post('/users', async (req, res) => {
 			const user = req.body;
 			// insert email if user is new
@@ -47,14 +54,32 @@ async function run() {
 			res.send(result);
 		})
 
+		app.patch('/users/admin/:id', async (req, res) => { 
+			const { id } = req.params;
+			const filter = { _id: new ObjectId(id) };
+			const updateDoc = {
+				$set: {
+					role: 'admin'
+				}
+			}
+			const result = await usersCollection.updateOne(filter, updateDoc);
+			res.send(result);
+		});
+
+		app.delete('/users/:id', async (req, res) => { 
+			const { id } = req.params;
+			const query = { _id: new ObjectId(id) };
+			const result = await usersCollection.deleteOne(query);
+			res.send(result);
+		});
 
 
-
-
+		// menu collection
 		app.get('/menu', async (req, res) => {
 			const result = await menuCollection.find().toArray();
 			res.send(result)
 		})
+
 
 		// carts collection
 

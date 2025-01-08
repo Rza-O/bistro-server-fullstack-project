@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const morgan = require('morgan');
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const port = process.env.PORT || 8000
@@ -27,16 +28,48 @@ const client = new MongoClient(uri, {
 async function run() {
 	try {
 		// Connect the client to the server	(optional starting in v4.7)
-		await client.connect();
+		// await client.connect();
+
 
 		const menuCollection = client.db('BistroDB').collection('menu');
 		const cartsCollection = client.db('BistroDB').collection('carts');
 		const usersCollection = client.db('BistroDB').collection('users');
 
 
+
+		// jwt related apis
+		app.post('/jwt', (req, res) => {
+			const user = req.body
+			const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+			res.send({ token });
+		})
+
+		// verify Token middleware
+		const verifyToken = async (req, res, next) => {
+			console.log('inside middleware', req.headers.authorization);
+			if (!req.headers.authorization) {
+				return res.status('401').send({ message: 'Forbidden Access' });
+			}
+
+			const token = req.headers.authorization.split(' ')[1];
+			if (!token) {
+				return res.status('400').send('Forbidden access')
+			}
+
+			jwt.verify(token, process.env.ACCESS_TOKEN, (error, decoded) => {
+				if (error) {
+					return res.status(401).send({message: 'Forbidden Access'})
+				}
+				req.decoded = decoded;
+				next();
+			})
+			
+		}
+
+
 		// users related api
 
-		app.get('/users', async (req, res) => {
+		app.get('/users', verifyToken,async (req, res) => {
 			const result = await usersCollection.find().toArray();
 			res.send(result);
 		});
@@ -46,7 +79,7 @@ async function run() {
 			const user = req.body;
 			// insert email if user is new
 			const query = { email: user.email };
-			const existingUser = await usersCollection.findOne(query); 
+			const existingUser = await usersCollection.findOne(query);
 			if (existingUser) {
 				return res.send({ message: 'User already exists', insertedId: null });
 			}
@@ -54,7 +87,7 @@ async function run() {
 			res.send(result);
 		})
 
-		app.patch('/users/admin/:id', async (req, res) => { 
+		app.patch('/users/admin/:id', async (req, res) => {
 			const { id } = req.params;
 			const filter = { _id: new ObjectId(id) };
 			const updateDoc = {
@@ -66,7 +99,7 @@ async function run() {
 			res.send(result);
 		});
 
-		app.delete('/users/:id', async (req, res) => { 
+		app.delete('/users/:id', async (req, res) => {
 			const { id } = req.params;
 			const query = { _id: new ObjectId(id) };
 			const result = await usersCollection.deleteOne(query);

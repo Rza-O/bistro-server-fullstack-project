@@ -58,22 +58,36 @@ async function run() {
 
 			jwt.verify(token, process.env.ACCESS_TOKEN, (error, decoded) => {
 				if (error) {
-					return res.status(401).send({message: 'Forbidden Access'})
+					return res.status(401).send({ message: 'Forbidden Access' })
 				}
 				req.decoded = decoded;
 				next();
 			})
-			
+
 		}
 
 
 		// users related api
 
-		app.get('/users', verifyToken,async (req, res) => {
+		app.get('/users', verifyToken, async (req, res) => {
 			const result = await usersCollection.find().toArray();
 			res.send(result);
 		});
 
+		// api to check if a user is admin
+		app.get('/users/admin/:email', verifyToken, async (req, res) => {
+			const email = req.params.email;
+			if (email !== req.decoded.email) {
+				return res.status(403).send({ message: 'Unauthorized Access!' })
+			}
+			const query = { email: email };
+			const user = await usersCollection.findOne(query);
+			let admin = false;
+			if (user) {
+				admin = user?.role === 'admin';
+			}
+			res.send({ admin });
+		})
 
 		app.post('/users', async (req, res) => {
 			const user = req.body;

@@ -58,18 +58,29 @@ async function run() {
 
 			jwt.verify(token, process.env.ACCESS_TOKEN, (error, decoded) => {
 				if (error) {
-					return res.status(401).send({ message: 'Forbidden Access' })
+					return res.status(401).send({ message: 'UnAuthorized Access' })
 				}
 				req.decoded = decoded;
 				next();
 			})
+		}
 
+		// use verify admin after verifyToken
+		const verifyAdmin = async (req, res, next) => {
+			const email = req.decoded.email;
+			const query = { email: email };
+			const user = await usersCollection.findOne(query);
+			const isAdmin = user?.role === 'admin';
+			if (!isAdmin) {
+				return res.status(403).send({message: 'Forbidden Access'})
+			}
+			next();
 		}
 
 
 		// users related api
 
-		app.get('/users', verifyToken, async (req, res) => {
+		app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
 			const result = await usersCollection.find().toArray();
 			res.send(result);
 		});
@@ -101,7 +112,7 @@ async function run() {
 			res.send(result);
 		})
 
-		app.patch('/users/admin/:id', async (req, res) => {
+		app.patch('/users/admin/:id', verifyToken, verifyAdmin,async (req, res) => {
 			const { id } = req.params;
 			const filter = { _id: new ObjectId(id) };
 			const updateDoc = {
@@ -113,7 +124,7 @@ async function run() {
 			res.send(result);
 		});
 
-		app.delete('/users/:id', async (req, res) => {
+		app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
 			const { id } = req.params;
 			const query = { _id: new ObjectId(id) };
 			const result = await usersCollection.deleteOne(query);
@@ -126,6 +137,19 @@ async function run() {
 			const result = await menuCollection.find().toArray();
 			res.send(result)
 		})
+
+		app.post('/menu', verifyToken, verifyAdmin, async (req, res) => { 
+			const item = req.body;
+			const result = await menuCollection.insertOne(item);
+			res.send(result);
+		});
+
+		app.delete('/menu/:id', verifyToken, verifyAdmin, async (req, res) => { 
+			const id = req.params.id;
+			const query = { _id: new ObjectId(id)};
+			const result = await menuCollection.deleteOne(query);
+			res.send(result);
+		});
 
 
 		// carts collection

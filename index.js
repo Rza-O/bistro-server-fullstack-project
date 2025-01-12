@@ -259,6 +259,35 @@ async function run() {
 		})
 
 
+		// using aggregate pipeline
+		app.get('/orders-stats', async (req, res) => {
+			const result = await paymentsCollection.aggregate([
+				{
+					$unwind: '$menuItemIds'
+				},
+				{
+					$lookup: {
+						from: 'menu',
+						localField: 'menuItemIds',
+						foreignField: '_id',
+						as: 'menuItems'
+					}
+				},
+				{
+					$unwind: '$menuItems'
+				},
+				{
+					$group: {
+						_id: '$menuItems.category',
+						quantity: { $sum: 1 },
+						revenue: {$sum: '$menuItems.price'}
+					}
+				}
+			]).toArray();
+
+			res.send(result);
+		})
+
 
 
 

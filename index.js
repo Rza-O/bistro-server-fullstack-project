@@ -198,6 +198,17 @@ async function run() {
 
 
 		// payment after confirmation related api
+
+		app.get('/payments/:email', verifyToken, async (req, res) => {
+			const query = { email: req.params.email }
+			if (req.params.email !== req.decoded.email) {
+				return res.status(403).send({message: 'Forbidden Access'})
+			}
+			const result = await paymentsCollection.find(query).toArray();
+			res.send(result);
+		})
+
+
 		app.post('/payments', async (req, res) => {
 			const payment = req.body;
 			const paymentResult = await paymentsCollection.insertOne(payment);
